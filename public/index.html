@@ -3,196 +3,933 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Message Board</title>
+    <title>CineMatch — AI Movie Recommendations</title>
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      /* ── Reset & Base ─────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg:       #0c0c0e;
+        --surface:  #16161a;
+        --border:   #2a2a35;
+        --gold:     #f0b429;
+        --gold-dim: #a07820;
+        --text:     #e8e8f0;
+        --muted:    #6e6e88;
+        --accent:   #7c6af7;
+        --green:    #3ecf8e;
+        --red:      #ef4444;
+        --radius:   12px;
+        --shadow:   0 4px 32px rgba(0,0,0,.6);
       }
+
+      html { font-size: 16px; }
+
       body {
-        font-family: system-ui, sans-serif;
-        max-width: 600px;
-        margin: 40px auto;
-        padding: 0 20px;
-        color: #333;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        min-height: 100vh;
+        line-height: 1.6;
       }
-      h1 {
-        margin-bottom: 24px;
+
+      /* ── Header ──────────────────────────────────────────────── */
+      header {
+        text-align: center;
+        padding: 48px 20px 32px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(124,106,247,.08) 0%, transparent 100%);
       }
-      form {
+
+      .logo {
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -.03em;
+        color: var(--gold);
         display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 32px;
-      }
-      textarea {
-        width: 100%;
-        height: 80px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        font-family: inherit;
-        font-size: 14px;
-        resize: vertical;
-      }
-      .form-footer {
-        display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 8px;
       }
-      .char-count {
-        font-size: 13px;
-        color: #888;
+
+      .logo-icon { font-size: 2rem; }
+
+      header p {
+        color: var(--muted);
+        font-size: .95rem;
+        max-width: 480px;
+        margin: 0 auto;
       }
-      .char-count.over {
-        color: #e00;
-        font-weight: bold;
+
+      /* ── Wizard nav ───────────────────────────────────────────── */
+      .wizard-nav {
+        display: flex;
+        justify-content: center;
+        gap: 0;
+        padding: 24px 20px;
+        border-bottom: 1px solid var(--border);
       }
-      button {
-        padding: 8px 20px;
-        background: #333;
-        color: #fff;
+
+      .wizard-nav .step-dot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: .82rem;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .wizard-nav .step-dot .num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .8rem;
+        font-weight: 700;
+        background: var(--border);
+        color: var(--muted);
+        transition: all .3s;
+        flex-shrink: 0;
+      }
+
+      .wizard-nav .step-dot.active .num {
+        background: var(--gold);
+        color: #000;
+      }
+
+      .wizard-nav .step-dot.done .num {
+        background: var(--green);
+        color: #000;
+      }
+
+      .wizard-nav .step-dot.active { color: var(--gold); }
+      .wizard-nav .step-dot.done   { color: var(--green); }
+
+      .step-connector {
+        width: 40px;
+        height: 1px;
+        background: var(--border);
+        align-self: center;
+        margin: 0 4px;
+        flex-shrink: 0;
+      }
+
+      /* ── Main container ───────────────────────────────────────── */
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 20px 80px;
+      }
+
+      /* ── Steps ────────────────────────────────────────────────── */
+      .step { display: none; }
+      .step.active { display: block; animation: fadeIn .35s ease; }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ── Section titles ───────────────────────────────────────── */
+      .step-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        letter-spacing: -.02em;
+      }
+
+      .step-sub {
+        color: var(--muted);
+        font-size: .9rem;
+        margin-bottom: 28px;
+      }
+
+      /* ── Movie input (Step 1) ─────────────────────────────────── */
+      .input-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .input-row input {
+        flex: 1;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: .95rem;
+        color: var(--text);
+        outline: none;
+        transition: border-color .2s;
+      }
+
+      .input-row input:focus { border-color: var(--gold); }
+      .input-row input::placeholder { color: var(--muted); }
+
+      .btn {
+        padding: 12px 22px;
+        border-radius: 8px;
         border: none;
-        border-radius: 6px;
-        font-size: 14px;
+        font-size: .9rem;
+        font-weight: 600;
         cursor: pointer;
+        transition: all .2s;
+        white-space: nowrap;
       }
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+
+      .btn-gold {
+        background: var(--gold);
+        color: #000;
       }
-      .error {
-        color: #e00;
-        font-size: 13px;
-        margin-top: 4px;
+      .btn-gold:hover:not(:disabled) { background: #f5c842; transform: translateY(-1px); }
+      .btn-gold:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+      .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
       }
-      #messages {
+      .btn-outline:hover { border-color: var(--muted); }
+
+      .btn-accent {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-accent:hover:not(:disabled) { background: #9585f9; transform: translateY(-1px); }
+      .btn-accent:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+      /* ── Movie list ───────────────────────────────────────────── */
+      #movie-list {
         list-style: none;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
+        margin-bottom: 28px;
+        min-height: 10px;
       }
-      #messages li {
-        padding: 12px;
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
-        background: #fafafa;
+
+      #movie-list li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: .93rem;
+        animation: slideIn .25s ease;
       }
-      #messages li .text {
-        white-space: pre-wrap;
+
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-8px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+
+      #movie-list li .movie-num {
+        color: var(--gold);
+        font-weight: 700;
+        font-size: .85rem;
+        min-width: 22px;
+      }
+
+      #movie-list li .movie-name { flex: 1; }
+
+      #movie-list li .remove-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 1rem;
+        line-height: 1;
+        transition: color .2s;
+      }
+      #movie-list li .remove-btn:hover { color: var(--red); }
+
+      .empty-hint {
+        color: var(--muted);
+        font-size: .88rem;
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      /* ── Preferences (Step 2) ─────────────────────────────────── */
+      .pref-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      .pref-card label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 4px;
+        font-size: .95rem;
+      }
+
+      .pref-card .movie-label-num {
+        color: var(--gold);
+        margin-right: 6px;
+        font-size: .85rem;
+      }
+
+      .pref-card p {
+        color: var(--muted);
+        font-size: .82rem;
+        margin-bottom: 10px;
+      }
+
+      .pref-card textarea {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: .9rem;
+        color: var(--text);
+        font-family: inherit;
+        resize: vertical;
+        min-height: 80px;
+        outline: none;
+        transition: border-color .2s;
+        line-height: 1.5;
+      }
+      .pref-card textarea:focus { border-color: var(--accent); }
+      .pref-card textarea::placeholder { color: var(--muted); }
+
+      /* ── Research (Step 3) ────────────────────────────────────── */
+      .research-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--border);
+        border-top-color: var(--gold);
+        border-radius: 50%;
+        animation: spin .8s linear infinite;
+        flex-shrink: 0;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .spinner.done {
+        border-color: var(--green);
+        border-top-color: var(--green);
+        animation: none;
+      }
+
+      #progress-log {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        max-height: 360px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: .85rem;
+        font-family: 'SF Mono', 'Fira Mono', monospace;
+      }
+
+      .log-entry {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,.04);
+        animation: fadeIn .2s ease;
+        line-height: 1.45;
         word-break: break-word;
       }
-      #messages li .meta {
-        margin-top: 6px;
-        font-size: 12px;
-        color: #999;
+
+      .log-entry:last-child { border-bottom: none; }
+
+      .log-icon { flex-shrink: 0; font-size: .9rem; }
+
+      .log-text { color: var(--muted); flex: 1; }
+      .log-text strong { color: var(--text); font-weight: 500; }
+
+      .log-entry.search .log-icon::before  { content: '🔍'; }
+      .log-entry.fetch .log-icon::before   { content: '📄'; }
+      .log-entry.thinking .log-icon::before{ content: '💭'; }
+      .log-entry.summary .log-icon::before { content: '📋'; }
+      .log-entry.start .log-icon::before   { content: '🎬'; }
+      .log-entry.error .log-icon::before   { content: '⚠️'; }
+      .log-entry.done .log-icon::before    { content: '✅'; }
+
+      .log-entry.search .log-text strong { color: var(--gold); }
+      .log-entry.fetch .log-text strong  { color: var(--accent); }
+      .log-entry.error .log-text         { color: var(--red); }
+      .log-entry.done .log-text          { color: var(--green); }
+
+      /* ── Results (Step 4) ─────────────────────────────────────── */
+      #recommendations-output {
+        line-height: 1.7;
       }
-      #messages li .source {
+
+      .rec-intro {
+        color: var(--muted);
+        font-size: .9rem;
+        margin-bottom: 28px;
+        padding: 14px 16px;
+        background: var(--surface);
+        border-left: 3px solid var(--gold);
+        border-radius: 0 8px 8px 0;
+      }
+
+      /* Markdown-rendered recommendation styles */
+      #recommendations-output h2 {
+        font-size: 1.4rem;
+        color: var(--gold);
+        margin: 0 0 24px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #recommendations-output h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 32px 0 8px;
+      }
+
+      #recommendations-output h4 {
+        font-size: .95rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin: 14px 0 6px;
+      }
+
+      #recommendations-output p {
+        color: var(--muted);
+        margin-bottom: 10px;
+        font-size: .93rem;
+      }
+
+      #recommendations-output p strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      #recommendations-output em {
+        color: var(--gold-dim);
+        font-style: italic;
+      }
+
+      #recommendations-output blockquote {
+        border-left: 3px solid var(--accent);
+        margin: 14px 0;
+        padding: 8px 16px;
+        background: rgba(124,106,247,.07);
+        border-radius: 0 8px 8px 0;
+        color: var(--muted);
+        font-size: .9rem;
+        font-style: italic;
+      }
+
+      #recommendations-output ul, #recommendations-output ol {
+        margin: 8px 0 12px 20px;
+        color: var(--muted);
+        font-size: .93rem;
+      }
+
+      #recommendations-output li { margin-bottom: 4px; }
+
+      #recommendations-output hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 24px 0;
+      }
+
+      #recommendations-output a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      /* Movie card wrapper added by JS */
+      .movie-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        margin-bottom: 20px;
+        transition: border-color .2s;
+      }
+
+      .movie-card:hover { border-color: var(--gold-dim); }
+
+      /* ── Action row ───────────────────────────────────────────── */
+      .action-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 28px;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .action-row .hint {
+        color: var(--muted);
+        font-size: .83rem;
+      }
+
+      /* ── Error banner ─────────────────────────────────────────── */
+      .error-banner {
+        background: rgba(239,68,68,.12);
+        border: 1px solid rgba(239,68,68,.3);
+        border-radius: 8px;
+        padding: 14px 16px;
+        color: var(--red);
+        font-size: .9rem;
+        margin-bottom: 16px;
+        display: none;
+      }
+
+      .error-banner.visible { display: block; }
+
+      /* ── Nav link ─────────────────────────────────────────────── */
+      .back-link {
         display: inline-block;
-        font-size: 11px;
-        padding: 1px 6px;
-        border-radius: 4px;
-        background: #0088cc;
-        color: #fff;
-        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: .85rem;
+        text-decoration: none;
+        margin-bottom: 24px;
+      }
+      .back-link:hover { color: var(--text); }
+
+      /* ── Responsive ───────────────────────────────────────────── */
+      @media (max-width: 540px) {
+        .logo { font-size: 1.9rem; }
+        .step-title { font-size: 1.25rem; }
+        .wizard-nav .step-dot span:not(.num) { display: none; }
+        .step-connector { width: 20px; }
       }
     </style>
   </head>
   <body>
-    <h1>Message Board</h1>
 
-    <form id="msg-form">
-      <textarea
-        id="msg-input"
-        maxlength="280"
-        placeholder="Write a message (max 280 characters)..."
-      ></textarea>
-      <div class="form-footer">
-        <span class="char-count" id="char-count">0 / 280</span>
-        <button type="submit" id="submit-btn">Post</button>
+    <header>
+      <div class="logo">
+        <span class="logo-icon">🎬</span> CineMatch
       </div>
-      <div class="error" id="error"></div>
-    </form>
+      <p>An AI agent that digs deep into reviews to find movies you'll love — based on what you already love and why.</p>
+    </header>
 
-    <ul id="messages"></ul>
+    <!-- Wizard navigation -->
+    <nav class="wizard-nav" id="wizard-nav">
+      <div class="step-dot active" id="nav-1">
+        <span class="num">1</span>
+        <span>Your Movies</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-dot" id="nav-2">
+        <span class="num">2</span>
+        <span>What You Love</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-dot" id="nav-3">
+        <span class="num">3</span>
+        <span>Researching</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-dot" id="nav-4">
+        <span class="num">4</span>
+        <span>Results</span>
+      </div>
+    </nav>
+
+    <div class="container">
+
+      <!-- ── Step 1: Enter Favorite Movies ──────────────────────── -->
+      <section class="step active" id="step-1">
+        <h2 class="step-title">Your favorite movies</h2>
+        <p class="step-sub">Add 2–8 movies you love. The more you add, the better the recommendations.</p>
+
+        <div class="input-row">
+          <input
+            type="text"
+            id="movie-input"
+            placeholder="e.g. Eternal Sunshine of the Spotless Mind"
+            maxlength="120"
+            autocomplete="off"
+          />
+          <button class="btn btn-gold" onclick="addMovie()" id="add-btn">Add</button>
+        </div>
+
+        <div class="empty-hint" id="empty-hint">
+          Start typing a movie title above and click Add ↑
+        </div>
+        <ul id="movie-list"></ul>
+
+        <div class="action-row">
+          <span class="hint" id="movie-count-hint">Add at least 2 movies to continue</span>
+          <button class="btn btn-gold" onclick="goToStep2()" id="to-step2-btn" disabled>
+            Next: Tell me what you love →
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Step 2: Describe Preferences ──────────────────────── -->
+      <section class="step" id="step-2">
+        <h2 class="step-title">What do you love about these movies?</h2>
+        <p class="step-sub">The more specific you are, the more personal your recommendations will be. No answer is too weird.</p>
+
+        <div id="preferences-form"></div>
+
+        <div class="error-banner" id="pref-error"></div>
+
+        <div class="action-row">
+          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-accent" onclick="startResearch()" id="start-btn">
+            Find My Movies →
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Step 3: Research in Progress ──────────────────────── -->
+      <section class="step" id="step-3">
+        <div class="research-header">
+          <div class="spinner" id="spinner"></div>
+          <div>
+            <h2 class="step-title" style="margin-bottom:2px">Researching your taste...</h2>
+            <p style="color:var(--muted);font-size:.88rem;" id="research-status">
+              The agent is reading reviews and searching for films that match you.
+            </p>
+          </div>
+        </div>
+
+        <div id="progress-log"></div>
+      </section>
+
+      <!-- ── Step 4: Recommendations ───────────────────────────── -->
+      <section class="step" id="step-4">
+        <h2 class="step-title">Your personalized picks</h2>
+        <p class="step-sub" id="results-sub">Based on your favorites and what you love about them.</p>
+
+        <div id="recommendations-output"></div>
+
+        <div class="action-row" style="margin-top:40px">
+          <button class="btn btn-outline" onclick="goToStep(1)">Start over</button>
+          <button class="btn btn-gold" onclick="startResearch()">Re-run research</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 
     <script>
-      const MAX = 280;
-      const form = document.getElementById("msg-form");
-      const input = document.getElementById("msg-input");
-      const charCount = document.getElementById("char-count");
-      const errorEl = document.getElementById("error");
-      const messagesList = document.getElementById("messages");
-      const submitBtn = document.getElementById("submit-btn");
+      // ── State ────────────────────────────────────────────────────
+      let movies = [];          // ['Movie A', 'Movie B', ...]
+      let preferences = {};     // { 'Movie A': 'what I love...' }
+      let currentStep = 1;
+      let activeSSE = null;
 
-      input.addEventListener("input", () => {
-        const len = input.value.length;
-        charCount.textContent = `${len} / ${MAX}`;
-        charCount.classList.toggle("over", len > MAX);
-      });
+      // ── Utilities ─────────────────────────────────────────────────
+      function $(id) { return document.getElementById(id); }
 
-      async function loadMessages() {
-        const res = await fetch("/api/messages");
-        const messages = await res.json();
-        messagesList.innerHTML = "";
-        messages
-          .slice()
-          .reverse()
-          .forEach((m) => {
-            const li = document.createElement("li");
-            if (m.source === "telegram") {
-              const source = document.createElement("span");
-              source.className = "source";
-              source.textContent = `Telegram — ${m.sender}`;
-              li.appendChild(source);
-            }
-            const text = document.createElement("div");
-            text.className = "text";
-            text.textContent = m.message;
-            const meta = document.createElement("div");
-            meta.className = "meta";
-            meta.textContent = new Date(m.timestamp).toLocaleString();
-            li.appendChild(text);
-            li.appendChild(meta);
-            messagesList.appendChild(li);
-          });
+      function goToStep(n) {
+        $(`step-${currentStep}`).classList.remove('active');
+        $(`step-${n}`).classList.add('active');
+
+        // Update wizard nav
+        for (let i = 1; i <= 4; i++) {
+          const dot = $(`nav-${i}`);
+          dot.classList.remove('active', 'done');
+          if (i < n)  dot.classList.add('done');
+          if (i === n) dot.classList.add('active');
+        }
+
+        currentStep = n;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        errorEl.textContent = "";
-        const message = input.value.trim();
-
-        if (!message) {
-          errorEl.textContent = "Message cannot be empty.";
+      // ── Step 1: Movies ────────────────────────────────────────────
+      function addMovie() {
+        const input = $('movie-input');
+        const name = input.value.trim();
+        if (!name || movies.includes(name)) { input.focus(); return; }
+        if (movies.length >= 8) {
+          alert('You can add up to 8 movies. Remove one first.');
           return;
         }
+        movies.push(name);
+        input.value = '';
+        input.focus();
+        renderMovieList();
+      }
 
-        submitBtn.disabled = true;
-        try {
-          const res = await fetch("/api/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message }),
-          });
-          if (!res.ok) {
-            const data = await res.json();
-            errorEl.textContent = data.error || "Something went wrong.";
-            return;
-          }
-          input.value = "";
-          charCount.textContent = "0 / 280";
-          await loadMessages();
-        } catch {
-          errorEl.textContent = "Failed to send message.";
-        } finally {
-          submitBtn.disabled = false;
+      function removeMovie(i) {
+        movies.splice(i, 1);
+        renderMovieList();
+      }
+
+      function renderMovieList() {
+        const list = $('movie-list');
+        const hint = $('empty-hint');
+        hint.style.display = movies.length === 0 ? 'block' : 'none';
+
+        list.innerHTML = '';
+        movies.forEach((m, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span class="movie-num">${i + 1}.</span>
+            <span class="movie-name">${escHtml(m)}</span>
+            <button class="remove-btn" onclick="removeMovie(${i})" title="Remove">✕</button>`;
+          list.appendChild(li);
+        });
+
+        const hint2 = $('movie-count-hint');
+        const btn   = $('to-step2-btn');
+        if (movies.length === 0) {
+          hint2.textContent = 'Add at least 2 movies to continue';
+          btn.disabled = true;
+        } else if (movies.length === 1) {
+          hint2.textContent = 'Add at least 1 more movie to continue';
+          btn.disabled = true;
+        } else {
+          hint2.textContent = `${movies.length} movie${movies.length > 1 ? 's' : ''} added`;
+          btn.disabled = false;
         }
+      }
+
+      $('movie-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addMovie();
       });
 
-      loadMessages();
-      setInterval(loadMessages, 5000);
+      function goToStep2() {
+        if (movies.length < 2) return;
+        buildPreferencesForm();
+        goToStep(2);
+      }
+
+      // ── Step 2: Preferences ───────────────────────────────────────
+      const PLACEHOLDERS = [
+        'The way the non-linear story unfolded and left me thinking for days...',
+        'The slow burn tension and morally ambiguous characters...',
+        'The stunning cinematography and how silence was used as powerfully as dialogue...',
+        'How it mixed dark humour with genuine emotional depth...',
+        'The world-building felt lived-in, every detail mattered...',
+        'The lead performance — I felt every emotion without it being overplayed...',
+      ];
+
+      function buildPreferencesForm() {
+        const form = $('preferences-form');
+        form.innerHTML = '';
+        movies.forEach((movie, i) => {
+          const div = document.createElement('div');
+          div.className = 'pref-card';
+          div.innerHTML = `
+            <label for="pref-${i}">
+              <span class="movie-label-num">${i + 1}.</span>
+              ${escHtml(movie)}
+            </label>
+            <p>What specifically do you love about it? (optional but helps a lot)</p>
+            <textarea
+              id="pref-${i}"
+              placeholder="${escHtml(PLACEHOLDERS[i % PLACEHOLDERS.length])}"
+              rows="3"
+            ></textarea>`;
+          form.appendChild(div);
+        });
+      }
+
+      // ── Step 3: Research ──────────────────────────────────────────
+      function startResearch() {
+        // Collect preferences
+        preferences = {};
+        movies.forEach((movie, i) => {
+          const ta = $(`pref-${i}`);
+          if (ta) preferences[movie] = ta.value.trim();
+        });
+
+        goToStep(3);
+        runAgent();
+      }
+
+      function addLog(type, html) {
+        const log = $('progress-log');
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        div.innerHTML = `<span class="log-icon"></span><span class="log-text">${html}</span>`;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function truncateUrl(url, max = 70) {
+        try {
+          const u = new URL(url);
+          const short = u.hostname + u.pathname;
+          return short.length > max ? short.slice(0, max) + '…' : short;
+        } catch {
+          return url.length > max ? url.slice(0, max) + '…' : url;
+        }
+      }
+
+      async function runAgent() {
+        // Reset UI
+        $('progress-log').innerHTML = '';
+        $('spinner').className = 'spinner';
+        $('research-status').textContent =
+          'The agent is reading reviews and searching for films that match you.';
+
+        if (activeSSE) { activeSSE.abort(); }
+        const controller = new AbortController();
+        activeSSE = controller;
+
+        try {
+          const resp = await fetch('/api/movie-recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favoriteMovies: movies, moviePreferences: preferences }),
+            signal: controller.signal,
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ error: 'Server error' }));
+            addLog('error', err.error || 'Server error');
+            return;
+          }
+
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop(); // keep incomplete line
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const raw = line.slice(6).trim();
+              if (!raw) continue;
+
+              let evt;
+              try { evt = JSON.parse(raw); } catch { continue; }
+
+              handleSSEEvent(evt);
+            }
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            addLog('error', 'Connection error: ' + escHtml(err.message));
+          }
+        }
+      }
+
+      function handleSSEEvent(evt) {
+        switch (evt.type) {
+          case 'start':
+            addLog('start', evt.message || 'Starting research…');
+            break;
+
+          case 'search':
+            addLog('search',
+              `Searching: <strong>${escHtml(evt.query || '')}</strong>`);
+            break;
+
+          case 'fetch':
+            addLog('fetch',
+              `Reading: <strong>${escHtml(truncateUrl(evt.url || ''))}</strong>`);
+            break;
+
+          case 'thinking':
+            addLog('thinking', escHtml(evt.content || ''));
+            break;
+
+          case 'summary':
+            addLog('summary', escHtml(evt.content || ''));
+            break;
+
+          case 'result':
+            showResults(evt.content || '');
+            break;
+
+          case 'error':
+            addLog('error', escHtml(evt.message || 'An error occurred'));
+            $('spinner').className = 'spinner done';
+            $('research-status').textContent = 'Research stopped due to an error.';
+            break;
+
+          case 'done':
+            $('spinner').className = 'spinner done';
+            $('research-status').textContent = 'Research complete!';
+            addLog('done', 'Research complete — see your recommendations below!');
+            break;
+        }
+      }
+
+      // ── Step 4: Results ───────────────────────────────────────────
+      function showResults(markdownText) {
+        // Configure marked
+        marked.setOptions({
+          breaks: true,
+          gfm: true,
+        });
+
+        const html = marked.parse(markdownText);
+
+        $('recommendations-output').innerHTML = html;
+        $('results-sub').textContent =
+          `Based on your love of ${movies.slice(0, 3).join(', ')}${movies.length > 3 ? ' and more' : ''}.`;
+
+        // Wrap h3 sections in movie cards for styling
+        wrapMovieCards();
+
+        // Short delay so progress log shows "done" before switching
+        setTimeout(() => goToStep(4), 900);
+      }
+
+      function wrapMovieCards() {
+        const out = $('recommendations-output');
+        const h3s = out.querySelectorAll('h3');
+        h3s.forEach((h3) => {
+          const card = document.createElement('div');
+          card.className = 'movie-card';
+          h3.parentNode.insertBefore(card, h3);
+          card.appendChild(h3);
+
+          // Move following siblings until next h3 or hr or end
+          let next = card.nextSibling;
+          while (next && next.tagName !== 'H3' && next.tagName !== 'HR' && next.tagName !== 'H2') {
+            const afterNext = next.nextSibling;
+            card.appendChild(next);
+            next = afterNext;
+          }
+        });
+      }
+
+      // ── Helpers ───────────────────────────────────────────────────
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // Initial render
+      renderMovieList();
     </script>
   </body>
 </html>
